@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -47,7 +48,20 @@ public class TaskController {
         return ResponseEntity.status(HttpStatus.CREATED).body(newTask);
     }
 
-    @DeleteMapping("tasks/{id}")
+    @PutMapping("/tasks/{id}")
+    public ResponseEntity<Task> updateTask(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTaskRequest request) {
+        Task updatedTask = new Task(id, request.title(), request.done());
+        // replace() writes only if the id already exists, and returns null if it doesn't
+        Task oldTask = tasks.replace(id, updatedTask);
+        if (oldTask != null) {
+            return ResponseEntity.ok().body(updatedTask);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Void> deleteTask(
             @PathVariable Long id) {
         Task task = tasks.remove(id);
