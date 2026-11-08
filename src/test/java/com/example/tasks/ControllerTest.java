@@ -8,6 +8,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -265,6 +266,44 @@ class ControllerTest {
                 .content("""
                     {"title": "Updated task", "done": true}
                     """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void list_tasks_filter_done_true_returns_only_done_tasks() throws Exception {
+        creat_task_helper("Task 1", true);
+        creat_task_helper("Task 2", false);
+        creat_task_helper("Task 3", true);
+
+        mockMvc.perform(get("/tasks").param("done", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", containsInAnyOrder("Task 1", "Task 3")));
+    }
+
+    @Test
+    void list_tasks_filter_done_false_returns_only_not_done_tasks() throws Exception {
+        creat_task_helper("Task 1", true);
+        creat_task_helper("Task 2", false);
+        creat_task_helper("Task 3", false);
+
+        mockMvc.perform(get("/tasks").param("done", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", containsInAnyOrder("Task 2", "Task 3")));
+    }
+
+    @Test
+    void list_tasks_filter_with_no_matches_returns_empty_list() throws Exception {
+        creat_task_helper("Task 1", true);
+        creat_task_helper("Task 2", true);
+
+        mockMvc.perform(get("/tasks").param("done", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void list_tasks_filter_with_invalid_value_returns_400() throws Exception {
+        mockMvc.perform(get("/tasks").param("done", "maybe"))
                 .andExpect(status().isBadRequest());
     }
 }

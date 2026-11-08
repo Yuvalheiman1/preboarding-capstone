@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -24,8 +25,14 @@ public class TaskController {
     private final Map<Long, Task> tasks = new ConcurrentHashMap<>();
 
     @GetMapping("/tasks")
-    public Collection<Task> listTasks() {
-        return tasks.values();
+    public Collection<Task> listTasks(
+            @RequestParam(required = false) Boolean done) {
+        if (done == null) {
+            return tasks.values();
+        }
+        return tasks.values().stream()
+                .filter(task -> task.done() == done)
+                .toList();
     }
 
     @GetMapping("/tasks/{id}")
