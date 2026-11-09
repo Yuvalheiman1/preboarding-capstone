@@ -3,6 +3,7 @@ package com.example.tasks;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
@@ -17,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TaskController.class)
+@Import({TaskService.class, TaskRepository.class})
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 class ControllerTest {
 
@@ -106,6 +108,14 @@ class ControllerTest {
         mockMvc.perform(get("/tasks/4"))
                 .andExpect(status().isNotFound());
 
+    }
+
+    @Test
+    void get_missing_task_returns_error_details() throws Exception {
+        mockMvc.perform(get("/tasks/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Task 99 not found"));
     }
 
     @Test
@@ -299,6 +309,39 @@ class ControllerTest {
         mockMvc.perform(get("/tasks").param("done", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void count_tasks_with_no_tasks_returns_zeros() throws Exception {
+        mockMvc.perform(get("/tasks/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0))
+                .andExpect(jsonPath("$.done").value(0));
+    }
+
+    @Test
+    void count_tasks_returns_total_and_done() throws Exception {
+        creat_task_helper("Task 1", true);
+        creat_task_helper("Task 2", false);
+        creat_task_helper("Task 3", true);
+
+        mockMvc.perform(get("/tasks/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(3))
+                .andExpect(jsonPath("$.done").value(2));
+    }
+
+    @Test
+    void count_tasks_changes_after_delete() throws Exception {
+        creat_task_helper("Task 1", true);
+        creat_task_helper("Task 2", false);
+
+        mockMvc.perform(delete("/tasks/1"));
+
+        mockMvc.perform(get("/tasks/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.done").value(0));
     }
 
     @Test

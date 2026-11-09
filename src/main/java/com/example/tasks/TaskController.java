@@ -1,12 +1,8 @@
 package com.example.tasks;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -21,60 +18,47 @@ import jakarta.validation.Valid;
 @RestController
 public class TaskController {
 
-    private final AtomicLong counter = new AtomicLong();
-    private final Map<Long, Task> tasks = new ConcurrentHashMap<>();
+    private final TaskService taskService;
+
+    public TaskController(TaskService taskService) {
+        this.taskService = taskService;
+    }
 
     @GetMapping("/tasks")
-    public Collection<Task> listTasks(
+    public List<Task> listTasks(
             @RequestParam(required = false) Boolean done) {
-        if (done == null) {
-            return tasks.values();
-        }
-        return tasks.values().stream()
-                .filter(task -> task.done() == done)
-                .toList();
+        return taskService.listTasks(done);
+    }
+
+    @GetMapping("/tasks/count")
+    public TaskCountResponse countTasks() {
+        return taskService.countTasks();
     }
 
     @GetMapping("/tasks/{id}")
-    public ResponseEntity<Task> getTask(
+    public Task getTask(
             @PathVariable Long id) {
-        Task task = tasks.get(id);
-        if (task != null) {
-            return ResponseEntity.ok().body(task);
-        }
-        return ResponseEntity.notFound().build();
+        return taskService.getTask(id);
     }
 
     @PostMapping("/tasks")
-    public ResponseEntity<Task> createTask(
+    @ResponseStatus(HttpStatus.CREATED)
+    public Task createTask(
             @Valid @RequestBody CreateTaskRequest request) {
-        Task newTask = new Task(counter.incrementAndGet(),
-                request.title(),
-                Boolean.TRUE.equals(request.done()));   //null -> false
-        tasks.put(newTask.id(), newTask);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newTask);
+        return taskService.createTask(request);
     }
 
     @PutMapping("/tasks/{id}")
-    public ResponseEntity<Task> updateTask(
+    public Task updateTask(
             @PathVariable Long id,
             @Valid @RequestBody UpdateTaskRequest request) {
-        Task updatedTask = new Task(id, request.title(), request.done());
-        // replace() writes only if the id already exists, and returns null if it doesn't
-        Task oldTask = tasks.replace(id, updatedTask);
-        if (oldTask != null) {
-            return ResponseEntity.ok().body(updatedTask);
-        }
-        return ResponseEntity.notFound().build();
+        return taskService.updateTask(id, request);
     }
 
     @DeleteMapping("/tasks/{id}")
-    public ResponseEntity<Void> deleteTask(
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTask(
             @PathVariable Long id) {
-        Task task = tasks.remove(id);
-        if (task != null) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
+        taskService.deleteTask(id);
     }
 }

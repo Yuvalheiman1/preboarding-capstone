@@ -14,12 +14,19 @@ The goal is learning and becoming a better engineer before the real onboarding.
 - Test: `.\mvnw.cmd test`
 
 ## Structure
-- Temporary, for learning: controllers handle both HTTP and logic.
+Layered, package-by-feature (everything in `com.example.tasks`):
+- **Controller** (`TaskController`): HTTP only. Mapping, `@Valid`, success status. No business logic, no storage.
+- **Service** (`TaskService`): business rules. Knows nothing about HTTP; signals errors by throwing (e.g. `TaskNotFoundException`).
+- **Repository** (`TaskRepository`): storage only. In-memory for now; to be replaced by Spring Data when SQLite is connected.
+- **Errors**: `GlobalExceptionHandler` (`@RestControllerAdvice`) turns exceptions into ProblemDetail responses. Controllers have no error-status code.
+- Dependencies are passed in through the constructor (no `@Autowired` fields).
 
 ## Conventions
 - Classes: PascalCase
 - Tests: snake_case
-- Controller tests use `@WebMvcTest` and `MockMvc`
+- Controller tests use `@WebMvcTest`, `MockMvc` and `@Import({TaskService.class, TaskRepository.class})`
+- Service tests are plain JUnit with no Spring: `new TaskService(new TaskRepository())`
+- To add or change an endpoint, use the `add-endpoint` skill (`.claude/skills/add-endpoint/`)
 - Prefer static imports for frequently used utility methods, including all MockMvc request builders and result matchers, to keep test code concise and readable.
 
 ## Rules
